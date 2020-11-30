@@ -34,22 +34,22 @@ tinybackoff.NewPowerBackOff(delay, attempts, base) tinybackoff.BackOff
 tinybackoff.NewExponentialBackOff(maxDelay, attempts) tinybackoff.BackOff
 ````
 #### Retry
-###### Standart retry
+###### Standard retry
 ````go
 tinybackoff.Retry(backOff, operation) error
 ````
 ###### Retry until context is cancelled
 ````go
-tinybackoff.RetryUntilSucceeded(ctx, linearBackOff, operation) <-chan error
+tinybackoff.RetryUntilSucceeded(ctx, backOff, operation) <-chan error
 ````
 #### Repeat
-###### Standart repeat
+###### Standard repeat
 ````go
-tinybackoff.Repeat(linearBackOff, operation) error
+tinybackoff.Repeat(backOff, operation) error
 ````
 ###### Repeat until context is cancelled
 ````go
-tinybackoff.RepeatUntilCancelled(ctx, linearBackOff, operation) <- chan error
+tinybackoff.RepeatUntilCancelled(ctx, backOff, operation) <- chan error
 ````
 
 ## Installing
