@@ -8,7 +8,7 @@ import (
 
 // Creates Instance of Exponential Back-off
 // delay will be calculated as:
-// `maxDelay` * exp(`maxAttempts` - n), where n is lesser from either attempt number or `maxAttempts`
+// `maxDelay` / exp(`maxAttempts` - n), where n is lesser from either attempt number or `maxAttempts`
 func NewExponentialBackOff(maxDelay time.Duration, maxAttempts uint64) BackOff {
 	return &exponentialBackOff{
 		maxAttempts:   maxAttempts,

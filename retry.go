@@ -6,7 +6,7 @@ import (
 )
 
 // Runs `operation` function based on `backOff` configuration
-// returns last error returned from `operation` if all attempts have failed
+// returns last `error` returned from `operation` if all attempts have failed
 func Retry(backOff BackOff, operation Operation) (err error) {
 	for backOff.Continue() {
 		if err = operation(); err != nil {
@@ -21,15 +21,17 @@ func Retry(backOff BackOff, operation Operation) (err error) {
 }
 
 // Runs `operation` function based on `backOff` configuration
-// Runs until either `ctx` is cancelled or `operation` returns nil
-// returns channel to inform when operation has been completed
-func RetryUntilSucceeded(ctx context.Context, backOff BackOff, operation Operation) <-chan struct{} {
-	done := make(chan struct{})
+// Runs until either `ctx` is cancelled or `operation` returns `nil`
+// returns `chan error` (`nil` if operation was successful or `ctx.Err()` if `ctx` was cancelled)
+func RetryUntilSucceeded(ctx context.Context, backOff BackOff, operation Operation) <-chan error {
+	done := make(chan error)
 	go func() {
+		defer close(done)
 		for {
 			select {
 			case <-ctx.Done():
-				done <- struct{}{}
+				done <- ctx.Err()
+
 				return
 			default:
 				if err := operation(); err != nil {
@@ -37,7 +39,8 @@ func RetryUntilSucceeded(ctx context.Context, backOff BackOff, operation Operati
 					continue
 				}
 
-				done <- struct{}{}
+				done <- nil
+
 				return
 			}
 		}
