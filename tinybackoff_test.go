@@ -99,7 +99,7 @@ func TestRetrySuccess(t *testing.T) {
 	assert.True(backOff.Continue())
 }
 
-func TestRetryFailThanSuccess(t *testing.T) {
+func TestRetryFailThenSuccess(t *testing.T) {
 	assert := assert.New(t)
 	backOff := NewConstantBackOff(delay, uint64(attempts))
 	failF := func() func() error {
@@ -161,7 +161,7 @@ func TestRepeatSuccess(t *testing.T) {
 	assert.False(backOff.Continue())
 }
 
-func TestRepeatSuccessThanFail(t *testing.T) {
+func TestRepeatSuccessThenFail(t *testing.T) {
 	assert := assert.New(t)
 	backOff := NewConstantBackOff(delay, uint64(attempts))
 	failF := func() func() error {
