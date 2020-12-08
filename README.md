@@ -34,7 +34,7 @@ tinybackoff.NewPowerBackOff(delay, attempts, base) tinybackoff.BackOff
 ````go
 tinybackoff.NewExponentialBackOff(maxDelay, attempts) tinybackoff.BackOff
 ````
-###### Back-off with randomised delay
+###### Back-off with randomized delay
 ````go
 tinybackoff.Randomize(backOff, maxDeviation) tinybackoff.BackOff
 ````
