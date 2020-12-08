@@ -81,7 +81,7 @@ func TestExponentialBackOff(t *testing.T) {
 
 func TestRetryFail(t *testing.T) {
 	assert := assert.New(t)
-	backOff := NewConstantBackOff(delay, uint64(attempts))
+	backOff := Randomize(NewConstantBackOff(delay, uint64(attempts)), time.Second)
 	failF := func() error { return fmt.Errorf("failed") }
 	err := Retry(backOff, failF)
 
@@ -91,7 +91,7 @@ func TestRetryFail(t *testing.T) {
 
 func TestRetrySuccess(t *testing.T) {
 	assert := assert.New(t)
-	backOff := NewConstantBackOff(delay, uint64(attempts))
+	backOff := Randomize(NewConstantBackOff(delay, uint64(attempts)), time.Second)
 	failF := func() error { return nil }
 	err := Retry(backOff, failF)
 
@@ -101,7 +101,7 @@ func TestRetrySuccess(t *testing.T) {
 
 func TestRetryFailThenSuccess(t *testing.T) {
 	assert := assert.New(t)
-	backOff := NewConstantBackOff(delay, uint64(attempts))
+	backOff := Randomize(NewConstantBackOff(delay, uint64(attempts)), time.Second)
 	failF := func() func() error {
 		i := attempts
 		return func() error {
@@ -120,7 +120,7 @@ func TestRetryFailThenSuccess(t *testing.T) {
 func TestRetryUntilSucceeded(t *testing.T) {
 	assert := assert.New(t)
 	ctx := context.TODO()
-	backOff := NewConstantBackOff(delay, uint64(attempts))
+	backOff := Randomize(NewConstantBackOff(delay, uint64(attempts)), time.Second)
 	failF := func() error { return nil }
 	done := RetryUntilSucceeded(ctx, backOff, failF)
 
@@ -130,7 +130,7 @@ func TestRetryUntilSucceeded(t *testing.T) {
 func TestRetryUntilSucceededContextCancelled(t *testing.T) {
 	assert := assert.New(t)
 	ctx := context.TODO()
-	backOff := NewConstantBackOff(delay, uint64(attempts))
+	backOff := Randomize(NewConstantBackOff(delay, uint64(attempts)), time.Second)
 	failF := func() error { return fmt.Errorf("failed") }
 	ctx, cancel := context.WithTimeout(ctx, time.Second*2)
 
@@ -143,7 +143,7 @@ func TestRetryUntilSucceededContextCancelled(t *testing.T) {
 
 func TestRepeatFail(t *testing.T) {
 	assert := assert.New(t)
-	backOff := NewConstantBackOff(delay, uint64(attempts))
+	backOff := Randomize(NewConstantBackOff(delay, uint64(attempts)), time.Second)
 	failF := func() error { return fmt.Errorf("failed") }
 	err := Repeat(backOff, failF)
 
@@ -153,7 +153,7 @@ func TestRepeatFail(t *testing.T) {
 
 func TestRepeatSuccess(t *testing.T) {
 	assert := assert.New(t)
-	backOff := NewConstantBackOff(delay, uint64(attempts))
+	backOff := Randomize(NewConstantBackOff(delay, uint64(attempts)), time.Second)
 	failF := func() error { return nil }
 	err := Repeat(backOff, failF)
 
@@ -163,7 +163,7 @@ func TestRepeatSuccess(t *testing.T) {
 
 func TestRepeatSuccessThenFail(t *testing.T) {
 	assert := assert.New(t)
-	backOff := NewConstantBackOff(delay, uint64(attempts))
+	backOff := Randomize(NewConstantBackOff(delay, uint64(attempts)), time.Second)
 	failF := func() func() error {
 		i := attempts
 		return func() error {
@@ -182,7 +182,7 @@ func TestRepeatSuccessThenFail(t *testing.T) {
 func TestRepeatUntilCancelledErrorReceived(t *testing.T) {
 	assert := assert.New(t)
 	ctx := context.TODO()
-	backOff := NewConstantBackOff(delay, uint64(attempts))
+	backOff := Randomize(NewConstantBackOff(delay, uint64(attempts)), time.Second)
 	err := errors.New("test error")
 	failF := func() error { return err }
 	done := RepeatUntilCancelled(ctx, backOff, failF)
@@ -193,7 +193,7 @@ func TestRepeatUntilCancelledErrorReceived(t *testing.T) {
 func TestRepeatUntilCancelledContextCancelled(t *testing.T) {
 	assert := assert.New(t)
 	ctx := context.TODO()
-	backOff := NewConstantBackOff(delay, uint64(attempts))
+	backOff := Randomize(NewConstantBackOff(delay, uint64(attempts)), time.Second)
 	failF := func() error { return nil }
 	ctx, cancel := context.WithTimeout(ctx, time.Second*2)
 

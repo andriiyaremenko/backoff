@@ -11,6 +11,7 @@ This library allows you to run retries and repeats based on configured back-off.
     * Linear back-off
     * Power back-off
     * Exponential back-off
+	* Random back-off based on any other back-off
     * Define your own back-off
 * Retry operation based on back-off configuration
 * Repeat operation based on back-off configuration
@@ -32,6 +33,10 @@ tinybackoff.NewPowerBackOff(delay, attempts, base) tinybackoff.BackOff
 ###### Back-off with delay expotential growth
 ````go
 tinybackoff.NewExponentialBackOff(maxDelay, attempts) tinybackoff.BackOff
+````
+###### Back-off with randomised delay
+````go
+tinybackoff.Randomize(backOff, maxDeviation) tinybackoff.BackOff
 ````
 #### Retry
 ###### Standard retry
