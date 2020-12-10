@@ -26,8 +26,9 @@ type powerBackOff struct {
 
 func (p *powerBackOff) NextDelay() time.Duration {
 	p.mu.Lock()
+	defer p.mu.Unlock()
+
 	p.attemptsCount++
-	p.mu.Unlock()
 	return p.delay * time.Duration(math.Pow(float64(p.base), float64(p.getCount())))
 }
 

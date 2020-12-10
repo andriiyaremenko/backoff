@@ -24,8 +24,9 @@ type exponentialBackOff struct {
 
 func (e *exponentialBackOff) NextDelay() time.Duration {
 	e.mu.Lock()
+	defer e.mu.Unlock()
+
 	e.attemptsCount++
-	e.mu.Unlock()
 	return time.Duration(float64(e.maxDelay) / math.Exp(float64(e.maxAttempts-e.getCount())))
 }
 

@@ -25,8 +25,9 @@ type linearBackOff struct {
 
 func (l *linearBackOff) NextDelay() time.Duration {
 	l.mu.Lock()
+	defer l.mu.Unlock()
+
 	l.attemptsCount++
-	l.mu.Unlock()
 	return l.delay * time.Duration(l.multiplier) * time.Duration(l.getCount())
 }
 
