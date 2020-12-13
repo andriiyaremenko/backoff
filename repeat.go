@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-// Runs `operation` function based on `backOff` configuration until all attempts were spent
+// Runs `operation` function based on `backOff` configuration until all attempts were taken
 // returns first `error` returned from `operation` or `nil`
 func Repeat(backOff BackOff, operation Operation) error {
 	for backOff.Continue() {
