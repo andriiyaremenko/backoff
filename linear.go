@@ -8,7 +8,7 @@ import (
 // Creates Instance of Linear Back-off
 // delay will be calculated as:
 // `delay` * `multiplier` * n, where n is lesser from either attempt number or `maxAttempts`
-func NewLinearBackOff(delay time.Duration, maxAttempts, multiplier uint64) BackOff {
+func NewLinearBackOff(delay time.Duration, maxAttempts, multiplier uint64) ContinuableResettableBackOff {
 	return &linearBackOff{
 		delay:         delay,
 		maxAttempts:   maxAttempts,
@@ -17,28 +17,33 @@ func NewLinearBackOff(delay time.Duration, maxAttempts, multiplier uint64) BackO
 }
 
 type linearBackOff struct {
-	mu                         sync.Mutex
+	rwM sync.RWMutex
+
 	maxAttempts, attemptsCount uint64
 	multiplier                 uint64
 	delay                      time.Duration
 }
 
 func (l *linearBackOff) NextDelay() time.Duration {
-	l.mu.Lock()
-	defer l.mu.Unlock()
+	l.rwM.RLock()
+	defer l.rwM.RUnlock()
 
 	l.attemptsCount++
+
 	return l.delay * time.Duration(l.multiplier) * time.Duration(l.getCount())
 }
 
 func (l *linearBackOff) Continue() bool {
+	l.rwM.RLock()
+	defer l.rwM.RUnlock()
+
 	return l.maxAttempts > l.attemptsCount
 }
 
 func (l *linearBackOff) Reset() {
-	l.mu.Lock()
+	l.rwM.Lock()
 	l.attemptsCount = 0
-	l.mu.Unlock()
+	l.rwM.Unlock()
 }
 
 func (l *linearBackOff) getCount() uint64 {

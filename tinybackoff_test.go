@@ -10,7 +10,7 @@ import (
 
 const (
 	attempts = 4
-	delay    = time.Second
+	delay    = time.Millisecond * 100
 )
 
 func TestBackOff(t *testing.T) {
@@ -23,8 +23,8 @@ func TestBackOff(t *testing.T) {
 
 func testConstantBackOff(t *testing.T) {
 	assert := assert.New(t)
-	delay := time.Second * 10
-	backOff := NewConstantBackOff(delay, uint64(attempts))
+	delay := time.Millisecond * 100 * 10
+	backOff := WithMaxAttempts(NewConstantBackOff(delay), uint64(attempts))
 
 	for i := 0; i < attempts; i++ {
 		assert.Equal(true, backOff.Continue())
@@ -37,7 +37,7 @@ func testConstantBackOff(t *testing.T) {
 func testLinearBackOff(t *testing.T) {
 	assert := assert.New(t)
 	multiplier := 3
-	delay := time.Second * 10
+	delay := time.Millisecond * 100 * 10
 	backOff := NewLinearBackOff(delay, uint64(attempts), uint64(multiplier))
 
 	for i := 0; i < attempts; i++ {

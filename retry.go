@@ -7,7 +7,7 @@ import (
 
 // Runs `operation` function based on `backOff` configuration
 // returns last `error` returned from `operation` if all attempts have failed
-func Retry(backOff BackOff, operation Operation) (err error) {
+func Retry(backOff ContinuableBackOff, operation Operation) (err error) {
 	for backOff.Continue() {
 		if err = operation(); err != nil {
 			time.Sleep(backOff.NextDelay())
@@ -34,6 +34,14 @@ func RetryUntilSucceeded(ctx context.Context, backOff BackOff, operation Operati
 
 				return
 			default:
+				if continuable := AsContinuable(backOff); continuable != nil && !continuable.Continue() {
+					if resettable := AsResettable(backOff); resettable != nil {
+						resettable.Reset()
+					}
+
+					done <- CannotResetContinuable
+				}
+
 				if err := operation(); err != nil {
 					time.Sleep(backOff.NextDelay())
 					continue

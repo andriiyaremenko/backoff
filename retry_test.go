@@ -21,7 +21,7 @@ func TestRetry(t *testing.T) {
 
 func testRetryFail(t *testing.T) {
 	assert := assert.New(t)
-	backOff := Randomize(NewConstantBackOff(delay, uint64(attempts)), time.Second)
+	backOff := WithMaxAttempts(Randomize(NewConstantBackOff(delay), time.Millisecond*100), uint64(attempts))
 	failF := func() error { return fmt.Errorf("failed") }
 	err := Retry(backOff, failF)
 
@@ -31,7 +31,7 @@ func testRetryFail(t *testing.T) {
 
 func testRetrySuccess(t *testing.T) {
 	assert := assert.New(t)
-	backOff := Randomize(NewConstantBackOff(delay, uint64(attempts)), time.Second)
+	backOff := WithMaxAttempts(Randomize(NewConstantBackOff(delay), time.Millisecond*100), uint64(attempts))
 	failF := func() error { return nil }
 	err := Retry(backOff, failF)
 
@@ -41,7 +41,7 @@ func testRetrySuccess(t *testing.T) {
 
 func testRetryFailThenSuccess(t *testing.T) {
 	assert := assert.New(t)
-	backOff := Randomize(NewConstantBackOff(delay, uint64(attempts)), time.Second)
+	backOff := WithMaxAttempts(Randomize(NewConstantBackOff(delay), time.Millisecond*100), uint64(attempts))
 	failF := func() func() error {
 		i := attempts
 		return func() error {
@@ -60,23 +60,23 @@ func testRetryFailThenSuccess(t *testing.T) {
 func testRetryUntilSucceeded(t *testing.T) {
 	assert := assert.New(t)
 	ctx := context.TODO()
-	backOff := Randomize(NewConstantBackOff(delay, uint64(attempts)), time.Second)
+	backOff := WithMaxAttempts(Randomize(NewConstantBackOff(delay), time.Millisecond*100), uint64(attempts))
 	failF := func() error { return nil }
 	done := RetryUntilSucceeded(ctx, backOff, failF)
 
-	assert.Eventually(func() bool { return <-done == nil }, time.Second*2, time.Millisecond)
+	assert.Eventually(func() bool { return <-done == nil }, time.Millisecond*100*2, time.Millisecond)
 }
 
 func testRetryUntilSucceededContextCancelled(t *testing.T) {
 	assert := assert.New(t)
 	ctx := context.TODO()
-	backOff := Randomize(NewConstantBackOff(delay, uint64(attempts)), time.Second)
+	backOff := WithMaxAttempts(Randomize(NewConstantBackOff(delay), time.Millisecond*100), uint64(attempts))
 	failF := func() error { return fmt.Errorf("failed") }
-	ctx, cancel := context.WithTimeout(ctx, time.Second*2)
+	ctx, cancel := context.WithTimeout(ctx, time.Millisecond*100)
 
 	defer cancel()
 
 	done := RetryUntilSucceeded(ctx, backOff, failF)
 
-	assert.Eventually(func() bool { return <-done == context.DeadlineExceeded }, time.Second*4, time.Millisecond)
+	assert.Eventually(func() bool { return <-done == context.DeadlineExceeded }, time.Millisecond*100*4, time.Millisecond)
 }

@@ -7,7 +7,7 @@ import (
 
 // Runs `operation` function based on `backOff` configuration until all attempts were taken
 // returns first `error` returned from `operation` or `nil`
-func Repeat(backOff BackOff, operation Operation) error {
+func Repeat(backOff ContinuableBackOff, operation Operation) error {
 	for backOff.Continue() {
 		if err := operation(); err != nil {
 			return err
@@ -33,6 +33,14 @@ func RepeatUntilCancelled(ctx context.Context, backOff BackOff, operation Operat
 
 				return
 			default:
+				if continuable := AsContinuable(backOff); continuable != nil && !continuable.Continue() {
+					if resettable := AsResettable(backOff); resettable != nil {
+						resettable.Reset()
+					}
+
+					done <- CannotResetContinuable
+				}
+
 				if err := operation(); err != nil {
 					done <- err
 
