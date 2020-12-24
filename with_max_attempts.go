@@ -5,6 +5,13 @@ import (
 	"time"
 )
 
+// Creates Instance of WithMaxAttempts Back-off.
+// Delay will be calculated by the rules of `base` `BackOff`.
+// `Continue()` will return `false` all attempts were spent or
+// if `base` (or anything it wraps) can be converted to `ContinuableBackOff`
+// and `base.Continue()` will return false.
+// `Reset()` will reset attempts counter to 0
+// and call `base.Reset()` if it can be converted to `ResettableBackOff`
 func WithMaxAttempts(backOff BackOff, maxAttempts uint64) ContinuableResettableBackOff {
 	return &withMaxAttempts{base: backOff, maxAttempts: maxAttempts, attemptsCount: 0}
 }

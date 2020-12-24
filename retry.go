@@ -20,13 +20,15 @@ func Retry(backOff ContinuableBackOff, operation Operation) (err error) {
 	return
 }
 
-// Runs `operation` function based on `backOff` configuration
-// Runs until either `ctx` is cancelled or `operation` returns `nil`
-// returns `chan error` (`nil` if operation was successful or `ctx.Err()` if `ctx` was cancelled)
+// Runs `operation` function based on `backOff` configuration.
+// Runs until either `ctx` is cancelled or `operation` returns `nil`.
+// Returns `chan error` (`nil` if operation was successful).
 func RetryUntilSucceeded(ctx context.Context, backOff BackOff, operation Operation) <-chan error {
 	done := make(chan error)
 	go func() {
 		defer close(done)
+
+		var lastErr error
 		for {
 			select {
 			case <-ctx.Done():
@@ -37,16 +39,18 @@ func RetryUntilSucceeded(ctx context.Context, backOff BackOff, operation Operati
 				if continuable := AsContinuable(backOff); continuable != nil && !continuable.Continue() {
 					if resettable := AsResettable(continuable); resettable != nil {
 						resettable.Reset()
+					}
 
+					if continuable.Continue() {
 						continue
 					}
 
-					done <- CannotResetContinuable
+					done <- lastErr
 
 					return
 				}
 
-				if err := operation(); err != nil {
+				if lastErr = operation(); lastErr != nil {
 					time.Sleep(backOff.NextDelay())
 					continue
 				}

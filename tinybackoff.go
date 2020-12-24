@@ -1,11 +1,8 @@
 package tinybackoff
 
 import (
-	"errors"
 	"time"
 )
-
-var CannotResetContinuable = errors.New("BackOff.Continue() bool returned false and but has no method Reset()")
 
 type Resettable interface {
 	// resets attempts count to `0`
@@ -21,6 +18,8 @@ type Stoppable interface {
 	Continuable
 	// makes `Continue()` return `false`
 	Stop()
+	// restores `Continue()` calculation logic
+	Restart()
 }
 
 type BackOff interface {
