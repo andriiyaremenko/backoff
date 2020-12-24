@@ -20,23 +20,27 @@ This library allows you to run retries and repeats based on configured back-off.
 #### Back-off
 ###### Back-off with constant delay
 ````go
-tinybackoff.NewConstantBackOff(delay, attempts) tinybackoff.BackOff
+tinybackoff.NewConstantBackOff(delay) tinybackoff.BackOff
 ````
 ###### Back-off with delay linear growth
 ````go
-tinybackoff.NewLinearBackOff(delay, attempts, multiplier) tinybackoff.BackOff
+tinybackoff.NewLinearBackOff(delay, delta, attmempts) tinybackoff.ResettableBackOff
 ````
 ###### Back-off with delay power growth
 ````go
-tinybackoff.NewPowerBackOff(delay, attempts, base) tinybackoff.BackOff
+tinybackoff.NewPowerBackOff(delay, base, attempts) tinybackoff.ResettableBackOff
 ````
 ###### Back-off with delay expotential growth
 ````go
-tinybackoff.NewExponentialBackOff(maxDelay, attempts) tinybackoff.BackOff
+tinybackoff.NewExponentialBackOff(maxDelay, attempts) tinybackoff.ResettableBackOff
 ````
 ###### Back-off with randomized delay
 ````go
 tinybackoff.Randomize(backOff, maxDeviation) tinybackoff.BackOff
+````
+###### Back-off with max attempts
+````go
+tinybackoff.WithMaxAttempts(backOff, maxAttempts) tinybackoff.ContinuableResettableBackOff
 ````
 #### Retry
 ###### Standard retry
