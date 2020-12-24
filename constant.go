@@ -4,7 +4,7 @@ import (
 	"time"
 )
 
-// Creates Instance of Power Back-off with base of 1
+// Creates Instance of Constant Back-off
 // delay will be calculated as: `delay`
 func NewConstantBackOff(delay time.Duration) BackOff {
 	return &constantBackOff{delay: delay}

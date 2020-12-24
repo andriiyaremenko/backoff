@@ -8,19 +8,20 @@ import (
 
 // Creates Instance of Exponential Back-off
 // delay will be calculated as:
-// `maxDelay` / exp(`maxAttempts` - n), where n is lesser from either attempt number or `maxAttempts`
-func NewExponentialBackOff(maxDelay time.Duration, maxAttempts uint64) ContinuableResettableBackOff {
+// `maxDelay` / exp(`attemptsToReachMax` - n), where n is lesser from either attempt number or `attemptsToReachMax`
+func NewExponentialBackOff(maxDelay time.Duration, attemptsToReachMax uint64) ResettableBackOff {
 	return &exponentialBackOff{
-		maxAttempts:   maxAttempts,
-		attemptsCount: 0,
-		maxDelay:      maxDelay}
+		attemptsToReachMax: attemptsToReachMax,
+		attemptsCount:      0,
+		maxDelay:           maxDelay}
 }
 
 type exponentialBackOff struct {
 	rwM sync.RWMutex
 
-	maxAttempts, attemptsCount uint64
-	maxDelay                   time.Duration
+	attemptsToReachMax uint64
+	attemptsCount      uint64
+	maxDelay           time.Duration
 }
 
 func (e *exponentialBackOff) NextDelay() time.Duration {
@@ -29,14 +30,7 @@ func (e *exponentialBackOff) NextDelay() time.Duration {
 
 	e.attemptsCount++
 
-	return time.Duration(float64(e.maxDelay) / math.Exp(float64(e.maxAttempts-e.getCount())))
-}
-
-func (e *exponentialBackOff) Continue() bool {
-	e.rwM.RLock()
-	defer e.rwM.RUnlock()
-
-	return e.maxAttempts > e.attemptsCount
+	return time.Duration(float64(e.maxDelay) / math.Exp(float64(e.attemptsToReachMax-e.getCount())))
 }
 
 func (e *exponentialBackOff) Reset() {
@@ -46,8 +40,8 @@ func (e *exponentialBackOff) Reset() {
 }
 
 func (e *exponentialBackOff) getCount() uint64 {
-	if e.maxAttempts <= e.attemptsCount {
-		return e.maxAttempts
+	if e.attemptsToReachMax <= e.attemptsCount {
+		return e.attemptsToReachMax
 	}
 
 	return e.attemptsCount

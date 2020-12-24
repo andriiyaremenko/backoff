@@ -23,6 +23,6 @@ func (r *randomize) NextDelay() time.Duration {
 	return r.base.NextDelay() + time.Duration(rand.Int63n(int64(r.maxDeviation)))
 }
 
-func (r *randomize) BackOff() BackOff {
+func (r *randomize) UnwrapBackOff() BackOff {
 	return r.base
 }

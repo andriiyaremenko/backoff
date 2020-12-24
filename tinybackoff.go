@@ -58,12 +58,12 @@ type StoppableResettableBackOff interface {
 type Operation func() error
 
 func UnwrapBackOff(backOff BackOff) BackOff {
-	b, ok := backOff.(interface{ BackOff() BackOff })
+	b, ok := backOff.(interface{ UnwrapBackOff() BackOff })
 	if !ok {
 		return nil
 	}
 
-	return b.BackOff()
+	return b.UnwrapBackOff()
 }
 
 func AsContinuable(backOff BackOff) ContinuableBackOff {

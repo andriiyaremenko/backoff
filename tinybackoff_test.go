@@ -23,7 +23,7 @@ func TestBackOff(t *testing.T) {
 
 func testConstantBackOff(t *testing.T) {
 	assert := assert.New(t)
-	delay := time.Millisecond * 100 * 10
+	delay := time.Millisecond * 100
 	backOff := WithMaxAttempts(NewConstantBackOff(delay), uint64(attempts))
 
 	for i := 0; i < attempts; i++ {
@@ -36,35 +36,29 @@ func testConstantBackOff(t *testing.T) {
 
 func testLinearBackOff(t *testing.T) {
 	assert := assert.New(t)
-	multiplier := 3
-	delay := time.Millisecond * 100 * 10
-	backOff := NewLinearBackOff(delay, uint64(attempts), uint64(multiplier))
+	multiplier := time.Millisecond * 50
+	delay := time.Millisecond * 100
+	backOff := NewLinearBackOff(delay, multiplier, uint64(attempts))
 
 	for i := 0; i < attempts; i++ {
 		attempt := i + 1
-		expected := delay * time.Duration(multiplier) * time.Duration(attempt)
+		expected := delay + multiplier*time.Duration(attempt)
 
-		assert.Equal(true, backOff.Continue())
 		assert.Equal(expected, backOff.NextDelay())
 	}
-
-	assert.Equal(false, backOff.Continue())
 }
 
 func testPowerBackOff(t *testing.T) {
 	assert := assert.New(t)
 	base := 2
-	backOff := NewPowerBackOff(delay, uint64(attempts), uint64(base))
+	backOff := NewPowerBackOff(delay, uint64(base), uint64(attempts))
 
 	for i := 0; i < attempts; i++ {
 		attempt := i + 1
 		expected := delay * time.Duration(math.Pow(float64(base), float64(attempt)))
 
-		assert.Equal(true, backOff.Continue())
 		assert.Equal(expected, backOff.NextDelay())
 	}
-
-	assert.Equal(false, backOff.Continue())
 }
 
 func testExponentialBackOff(t *testing.T) {
@@ -77,9 +71,6 @@ func testExponentialBackOff(t *testing.T) {
 		attempt := i + 1
 		expected := time.Duration(float64(maxDelay) / math.Exp(float64(attempts-attempt)))
 
-		assert.Equal(true, backOff.Continue())
 		assert.Equal(expected, backOff.NextDelay())
 	}
-
-	assert.Equal(false, backOff.Continue())
 }
