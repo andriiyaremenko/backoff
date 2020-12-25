@@ -19,6 +19,7 @@ func TestBackOff(t *testing.T) {
 	t.Run("PowerBackOff returns delay with growth equals power of `base`", testPowerBackOff)
 	t.Run("ExponentialBackOff returns delay with exponential growth until it reaches `maxDelay`",
 		testExponentialBackOff)
+	t.Run("Combine can combine bock-offs in one back-off", testCombine)
 }
 
 func testConstantBackOff(t *testing.T) {
@@ -72,5 +73,38 @@ func testExponentialBackOff(t *testing.T) {
 		expected := time.Duration(float64(maxDelay) / math.Exp(float64(attempts-attempt)))
 
 		assert.Equal(expected, backOff.NextDelay())
+	}
+}
+
+func testCombine(t *testing.T) {
+	assert := assert.New(t)
+	now := time.Now()
+	delay := now.Sub(now.Add(-time.Minute * 50))
+
+	backOff := Combine(delay,
+		WithMaxAttempts(NewConstantBackOff(time.Second*10), 2),
+		WithMaxAttempts(NewLinearBackOff(time.Minute, time.Second*30, 5), 5),
+	)
+
+	for i := 0; backOff.Continue(); i++ {
+		nextDelay := backOff.NextDelay()
+
+		if i == 0 {
+			assert.Equal(delay, nextDelay)
+			continue
+		}
+
+		if i > 0 && i < 3 {
+			assert.Equal(time.Second*10, nextDelay)
+			continue
+		}
+
+		if i >= 3 && i < 8 {
+			expected := time.Minute + time.Second*time.Duration(30*(i-2))
+			assert.Equal(expected, nextDelay)
+			continue
+		}
+
+		assert.Fail("Continue() was true for more times than expected: %d", i-1)
 	}
 }
