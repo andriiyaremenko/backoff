@@ -18,8 +18,8 @@ type Stoppable interface {
 	Continuable
 	// makes `Continue()` return `false`
 	Stop()
-	// restores `Continue()` calculation logic
-	CarryOn()
+	// restores `Continue()` calculation logic after `delay`
+	CarryOn(delay time.Duration)
 }
 
 type BackOff interface {

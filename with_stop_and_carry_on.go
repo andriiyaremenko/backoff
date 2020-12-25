@@ -44,7 +44,8 @@ func (wsr *withStopRestart) Continue() bool {
 	return wsr.isRunning && baseContinue
 }
 
-func (wsr *withStopRestart) CarryOn() {
+func (wsr *withStopRestart) CarryOn(delay time.Duration) {
+	time.Sleep(delay)
 	wsr.rwM.Lock()
 
 	wsr.isRunning = true
