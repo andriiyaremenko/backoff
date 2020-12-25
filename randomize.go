@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-// Creates Instance of Rand Back-off
+// Creates Instance of Randomize Back-off
 // delay will be calculated by the rules of `base` `BackOff` + random delay (less than `maxDeviation`)
 // `delay` * `multiplier` * n, where n is lesser from either attempt number or `maxAttempts`
 func Randomize(base BackOff, maxDeviation time.Duration) BackOff {

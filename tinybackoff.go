@@ -19,7 +19,7 @@ type Stoppable interface {
 	// makes `Continue()` return `false`
 	Stop()
 	// restores `Continue()` calculation logic
-	Restart()
+	CarryOn()
 }
 
 type BackOff interface {
@@ -48,14 +48,9 @@ type StoppableBackOff interface {
 	Stoppable
 }
 
-type StoppableResettableBackOff interface {
-	BackOff
-	Stoppable
-	Resettable
-}
-
 type Operation func() error
 
+// Unwraps `backOff` if it wraps another `BackOff`
 func UnwrapBackOff(backOff BackOff) BackOff {
 	b, ok := backOff.(interface{ UnwrapBackOff() BackOff })
 	if !ok {
@@ -65,6 +60,8 @@ func UnwrapBackOff(backOff BackOff) BackOff {
 	return b.UnwrapBackOff()
 }
 
+// Returns `ContinuableBackOff` if `backOff` (or anything it wraps) can be converted to it
+// or `nil` otherwise
 func AsContinuable(backOff BackOff) ContinuableBackOff {
 	continuable, ok := backOff.(ContinuableBackOff)
 	if ok {
@@ -79,10 +76,12 @@ func AsContinuable(backOff BackOff) ContinuableBackOff {
 	return nil
 }
 
+// Returns `ResettableBackOff` if `backOff` (or anything it wraps) can be converted to it
+// or `nil` otherwise
 func AsResettable(backOff BackOff) ResettableBackOff {
-	continuable, ok := backOff.(ResettableBackOff)
+	resettable, ok := backOff.(ResettableBackOff)
 	if ok {
-		return continuable
+		return resettable
 	}
 
 	backOff = UnwrapBackOff(backOff)
@@ -93,10 +92,12 @@ func AsResettable(backOff BackOff) ResettableBackOff {
 	return nil
 }
 
+// Returns `StoppableBackOff` if `backOff` (or anything it wraps) can be converted to it
+// or `nil` otherwise
 func AsStoppable(backOff BackOff) StoppableBackOff {
-	continuable, ok := backOff.(StoppableBackOff)
+	stoppable, ok := backOff.(StoppableBackOff)
 	if ok {
-		return continuable
+		return stoppable
 	}
 
 	backOff = UnwrapBackOff(backOff)

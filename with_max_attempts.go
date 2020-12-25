@@ -22,15 +22,21 @@ type withMaxAttempts struct {
 	base          BackOff
 	maxAttempts   uint64
 	attemptsCount uint64
+	lastDelay     time.Duration
 }
 
 func (wma *withMaxAttempts) NextDelay() time.Duration {
+	if !wma.Continue() {
+		return wma.lastDelay
+	}
+
 	wma.rwM.Lock()
 	defer wma.rwM.Unlock()
 
 	wma.attemptsCount++
+	wma.lastDelay = wma.base.NextDelay()
 
-	return wma.base.NextDelay()
+	return wma.lastDelay
 }
 
 func (wma *withMaxAttempts) Continue() bool {

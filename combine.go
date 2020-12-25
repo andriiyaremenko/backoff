@@ -5,6 +5,12 @@ import (
 	"time"
 )
 
+// Creates Instance of Combine Back-off.
+// Delay will be calculated by the rules of current `BackOff`.
+// Each time `current.Continue()` returns `false` `next` `BackOff` becomes `current`
+// until no more `next` left.
+// `Reset()` will reset current to first `next` `BackOff`
+// and call `Reset()` on any of `next` (or anything it wraps) if it can be converted to `ResettableBackOff`
 func Combine(delay time.Duration, next ...ContinuableBackOff) ContinuableResettableBackOff {
 	return &combine{current: &once{delay: delay}, backOffs: next, i: -1}
 }
@@ -35,16 +41,23 @@ func (o *once) Continue() bool {
 type combine struct {
 	rwM sync.RWMutex
 
-	i        int
-	current  ContinuableBackOff
-	backOffs []ContinuableBackOff
+	i         int
+	current   ContinuableBackOff
+	backOffs  []ContinuableBackOff
+	lastDelay time.Duration
 }
 
 func (c *combine) NextDelay() time.Duration {
+	if !c.Continue() {
+		return c.lastDelay
+	}
+
 	c.rwM.Lock()
 	defer c.rwM.Unlock()
 
-	return c.nextDelay()
+	c.lastDelay = c.nextDelay()
+
+	return c.lastDelay
 }
 
 func (c *combine) Continue() bool {
@@ -69,6 +82,10 @@ func (c *combine) Reset() {
 	}
 
 	c.rwM.Unlock()
+}
+
+func (c *combine) UnwrapBackOff() BackOff {
+	return c.current
 }
 
 func (c *combine) nextDelay() time.Duration {
