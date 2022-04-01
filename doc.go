@@ -29,8 +29,7 @@
 // 	)
 // 	// check if err is nil and process response v
 //
-// 	v, err := backoff.Repeat(
-// 		// it can return any type
+// 	err := backoff.Repeat(
 // 		func() error {
 // 			// your function to process
 // 		},
