@@ -1,82 +1,79 @@
-package tinybackoff
+package backoff_test
 
 import (
-	"context"
 	"fmt"
 	"testing"
 	"time"
 
+	"github.com/andriiyaremenko/backoff"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestRetry(t *testing.T) {
-	t.Run("Retry should run until all attempts where taken", testRetryFail)
-	t.Run("Retry should return first encountered success", testRetrySuccess)
-	t.Run("Retry should return first encountered success event if failed at firs",
-		testRetryFailThenSuccess)
-	t.Run("RetryUntilSucceeded should run until first encountered success", testRetryUntilSucceeded)
-	t.Run("RetryUntilSucceeded should run until context is cancelled if no success was encountered",
-		testRetryUntilSucceededContextCancelled)
+	t.Run("ShouldRunUntilAllAttemptsWhereTaken", testRetryFail)
+	t.Run("ShouldReturnFirstEncounteredSuccess", testRetrySuccess)
+	t.Run("ShouldReturnFirstEncounteredSuccessEventIfFailedAtFirs", testRetryFailThenSuccess)
+	t.Run("ShouldAcceptSeveralBackOffs", testRetrySeveralBackOffs)
 }
 
 func testRetryFail(t *testing.T) {
+	t.Parallel()
 	assert := assert.New(t)
-	backOff := WithMaxAttempts(Randomize(NewConstantBackOff(delay), time.Millisecond*100), uint64(attempts))
-	failF := func() error { return fmt.Errorf("failed") }
-	err := Retry(backOff, failF)
+	failF := func() (any, error) { return nil, fmt.Errorf("failed") }
+	_, err := backoff.Retry(failF, attempts, backoff.Constant(delay).Randomize(time.Millisecond*100))
 
 	assert.NotNil(err)
-	assert.False(backOff.Continue())
 }
 
 func testRetrySuccess(t *testing.T) {
+	t.Parallel()
 	assert := assert.New(t)
-	backOff := WithMaxAttempts(Randomize(NewConstantBackOff(delay), time.Millisecond*100), uint64(attempts))
-	failF := func() error { return nil }
-	err := Retry(backOff, failF)
+	failF := func() (any, error) { return nil, nil }
+	_, err := backoff.Retry(failF, attempts, backoff.Constant(delay).Randomize(time.Millisecond*100))
 
-	assert.Nil(err)
-	assert.True(backOff.Continue())
+	assert.NoError(err)
 }
 
 func testRetryFailThenSuccess(t *testing.T) {
+	t.Parallel()
 	assert := assert.New(t)
-	backOff := WithMaxAttempts(Randomize(NewConstantBackOff(delay), time.Millisecond*100), uint64(attempts))
-	failF := func() func() error {
+	failF := func() func() (any, error) {
 		i := attempts
-		return func() error {
+		return func() (any, error) {
 			if i--; i == 0 {
-				return nil
+				return nil, nil
 			}
 
-			return fmt.Errorf("failed")
+			return nil, fmt.Errorf("failed")
 		}
 	}
-	err := Retry(backOff, failF())
+	_, err := backoff.Retry(failF(), attempts, backoff.Constant(delay).Randomize(time.Millisecond*100))
 
 	assert.Nil(err)
 }
 
-func testRetryUntilSucceeded(t *testing.T) {
+func testRetrySeveralBackOffs(t *testing.T) {
+	t.Parallel()
 	assert := assert.New(t)
-	ctx := context.TODO()
-	backOff := WithMaxAttempts(Randomize(NewConstantBackOff(delay), time.Millisecond*100), uint64(attempts))
-	failF := func() error { return nil }
-	done := RetryUntilSucceeded(ctx, backOff, failF)
+	failF := func() func() (any, error) {
+		i := 1 + 3 + attempts + 2
+		return func() (any, error) {
+			if i--; i == 0 {
+				return nil, nil
+			}
 
-	assert.Eventually(func() bool { return <-done == nil }, time.Millisecond*100*2, time.Millisecond)
-}
+			return nil, fmt.Errorf("failed")
+		}
+	}
+	_, err := backoff.Retry(
+		failF(),
+		[]int{1, 3, attempts, 2},
+		backoff.Constant(delay).Randomize(time.Millisecond*100),
+		backoff.Linear(time.Millisecond*100, time.Millisecond*10),
+		backoff.Exponential(time.Millisecond*300),
+		backoff.Power(time.Millisecond*100, 2),
+		backoff.Constant(delay),
+	)
 
-func testRetryUntilSucceededContextCancelled(t *testing.T) {
-	assert := assert.New(t)
-	ctx := context.TODO()
-	backOff := WithMaxAttempts(Randomize(NewConstantBackOff(delay), time.Millisecond*100), uint64(attempts))
-	failF := func() error { return fmt.Errorf("failed") }
-	ctx, cancel := context.WithTimeout(ctx, time.Millisecond*100)
-
-	defer cancel()
-
-	done := RetryUntilSucceeded(ctx, backOff, failF)
-
-	assert.Eventually(func() bool { return <-done == context.DeadlineExceeded }, time.Millisecond*100*4, time.Millisecond)
+	assert.Nil(err)
 }

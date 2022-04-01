@@ -1,49 +1,42 @@
-package tinybackoff
+package backoff_test
 
 import (
-	"context"
-	"errors"
 	"fmt"
 	"testing"
 	"time"
 
+	"github.com/andriiyaremenko/backoff"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestRepeat(t *testing.T) {
-	t.Run("Repeat should return first encountered error", testRepeatFail)
-	t.Run("Repeat should run until all attempts where taken", testRepeatSuccess)
-	t.Run("Repeat should return first encountered error event if succeeded at first",
-		testRepeatSuccessThenFail)
-	t.Run("RepeatUtilCancelled should run until first encountered error",
-		testRepeatUntilCancelledErrorReceived)
-	t.Run("RepeatUtilCancelled should run until context is cancelled if no error was encountered",
-		testRepeatUntilCancelledContextCancelled)
+	t.Run("ShouldReturnFirstEncounteredError", testRepeatFail)
+	t.Run("ShouldRunUntilAllAttemptsWhereTaken", testRepeatSuccess)
+	t.Run("ShouldReturnFirstEncounteredErrorEventIfSucceededAtFirst", testRepeatSuccessThenFail)
+	t.Run("ShouldAcceptSeveralBackOffs", testRepeatSeveralBackOffs)
 }
 
 func testRepeatFail(t *testing.T) {
+	t.Parallel()
 	assert := assert.New(t)
-	backOff := WithMaxAttempts(Randomize(NewConstantBackOff(delay), time.Millisecond*100), uint64(attempts))
 	failF := func() error { return fmt.Errorf("failed") }
-	err := Repeat(backOff, failF)
+	err := backoff.Repeat(failF, attempts, backoff.Constant(delay).Randomize(time.Millisecond*100))
 
-	assert.NotNil(err)
-	assert.True(backOff.Continue())
+	assert.Error(err)
 }
 
 func testRepeatSuccess(t *testing.T) {
+	t.Parallel()
 	assert := assert.New(t)
-	backOff := WithMaxAttempts(Randomize(NewConstantBackOff(delay), time.Millisecond*100), uint64(attempts))
 	failF := func() error { return nil }
-	err := Repeat(backOff, failF)
+	err := backoff.Repeat(failF, attempts, backoff.Constant(delay).Randomize(time.Millisecond*100))
 
-	assert.Nil(err)
-	assert.False(backOff.Continue())
+	assert.NoError(err)
 }
 
 func testRepeatSuccessThenFail(t *testing.T) {
+	t.Parallel()
 	assert := assert.New(t)
-	backOff := WithMaxAttempts(Randomize(NewConstantBackOff(delay), time.Millisecond*100), uint64(attempts))
 	failF := func() func() error {
 		i := attempts
 		return func() error {
@@ -54,32 +47,23 @@ func testRepeatSuccessThenFail(t *testing.T) {
 			return nil
 		}
 	}
-	err := Repeat(backOff, failF())
+	err := backoff.Repeat(failF(), attempts, backoff.Constant(delay).Randomize(time.Millisecond*100))
 
-	assert.NotNil(err)
+	assert.Error(err)
 }
 
-func testRepeatUntilCancelledErrorReceived(t *testing.T) {
+func testRepeatSeveralBackOffs(t *testing.T) {
+	t.Parallel()
 	assert := assert.New(t)
-	ctx := context.TODO()
-	backOff := WithMaxAttempts(Randomize(NewConstantBackOff(delay), time.Millisecond*100), uint64(attempts))
-	err := errors.New("test error")
-	failF := func() error { return err }
-	done := RepeatUntilCancelled(ctx, backOff, failF)
+	err := backoff.Repeat(
+		func() error { return nil },
+		[]int{1, 3, attempts, 2},
+		backoff.Constant(delay).Randomize(time.Millisecond*100),
+		backoff.Linear(time.Millisecond*100, time.Millisecond*10),
+		backoff.Exponential(time.Millisecond*300),
+		backoff.Power(time.Millisecond*100, 2),
+		backoff.Constant(delay),
+	)
 
-	assert.Eventually(func() bool { return <-done == err }, time.Millisecond*100*2, time.Millisecond)
-}
-
-func testRepeatUntilCancelledContextCancelled(t *testing.T) {
-	assert := assert.New(t)
-	ctx := context.TODO()
-	backOff := WithMaxAttempts(Randomize(NewConstantBackOff(delay), time.Millisecond*100), uint64(attempts))
-	failF := func() error { return nil }
-	ctx, cancel := context.WithTimeout(ctx, time.Millisecond*100*2)
-
-	defer cancel()
-
-	done := RepeatUntilCancelled(ctx, backOff, failF)
-
-	assert.Eventually(func() bool { return <-done == nil }, time.Millisecond*100*4, time.Millisecond)
+	assert.Nil(err)
 }
