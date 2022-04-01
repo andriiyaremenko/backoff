@@ -35,7 +35,7 @@ func main() {
 	)
 	// check if err is nil and process response v
 
-	, err := backoff.Repeat(
+	err := backoff.Repeat(
 		func() error {
 			// your function to process
 		},
