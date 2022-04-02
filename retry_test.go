@@ -2,78 +2,100 @@ package backoff_test
 
 import (
 	"fmt"
-	"testing"
 	"time"
 
 	"github.com/andriiyaremenko/backoff"
-	"github.com/stretchr/testify/assert"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 )
 
-func TestRetry(t *testing.T) {
-	t.Run("ShouldRunUntilAllAttemptsWhereTaken", testRetryFail)
-	t.Run("ShouldReturnFirstEncounteredSuccess", testRetrySuccess)
-	t.Run("ShouldReturnFirstEncounteredSuccessEventIfFailedAtFirs", testRetryFailThenSuccess)
-	t.Run("ShouldAcceptSeveralBackOffs", testRetrySeveralBackOffs)
-}
-
-func testRetryFail(t *testing.T) {
-	t.Parallel()
-	assert := assert.New(t)
-	failF := func() (any, error) { return nil, fmt.Errorf("failed") }
-	_, err := backoff.Retry(failF, attempts, backoff.Constant(delay).Randomize(time.Millisecond*100))
-
-	assert.NotNil(err)
-}
-
-func testRetrySuccess(t *testing.T) {
-	t.Parallel()
-	assert := assert.New(t)
-	failF := func() (any, error) { return nil, nil }
-	_, err := backoff.Retry(failF, attempts, backoff.Constant(delay).Randomize(time.Millisecond*100))
-
-	assert.NoError(err)
-}
-
-func testRetryFailThenSuccess(t *testing.T) {
-	t.Parallel()
-	assert := assert.New(t)
-	failF := func() func() (any, error) {
-		i := attempts
-		return func() (any, error) {
-			if i--; i == 0 {
-				return nil, nil
-			}
-
-			return nil, fmt.Errorf("failed")
-		}
-	}
-	_, err := backoff.Retry(failF(), attempts, backoff.Constant(delay).Randomize(time.Millisecond*100))
-
-	assert.Nil(err)
-}
-
-func testRetrySeveralBackOffs(t *testing.T) {
-	t.Parallel()
-	assert := assert.New(t)
-	failF := func() func() (any, error) {
-		i := 1 + 3 + attempts + 2
-		return func() (any, error) {
-			if i--; i == 0 {
-				return nil, nil
-			}
-
-			return nil, fmt.Errorf("failed")
-		}
-	}
-	_, err := backoff.Retry(
-		failF(),
-		[]int{1, 3, attempts, 2},
-		backoff.Constant(delay).Randomize(time.Millisecond*100),
-		backoff.Linear(time.Millisecond*100, time.Millisecond*10),
-		backoff.Exponential(time.Millisecond*300),
-		backoff.Power(time.Millisecond*100, 2),
-		backoff.Constant(delay),
+var _ = Describe("Repeat", func() {
+	const (
+		attempts = 4
+		delay    = time.Millisecond * 100
 	)
 
-	assert.Nil(err)
-}
+	var counter *int
+	var defaultBackoff backoff.Backoff
+	attemptsCounter := func(counter *int, backOff backoff.Backoff) backoff.Backoff {
+		return func(attempt, attempts int) time.Duration {
+			*counter += 1
+			return backOff(attempt, attempts)
+		}
+	}
+
+	BeforeEach(func() {
+		counter = func() *int { i := 0; return &i }()
+		defaultBackoff = attemptsCounter(counter, backoff.Constant(delay).Randomize(time.Millisecond*100))
+	})
+
+	It("should not return until all attempts were taken", func() {
+		failF := func() error { return fmt.Errorf("failed") }
+		_, err := backoff.Retry(backoff.Lift(failF), attempts, defaultBackoff)
+
+		Expect(err).Should(HaveOccurred())
+		Expect(*counter).To(Equal(attempts))
+	})
+
+	It("should return first successful result", func() {
+		failF := func() (int, error) { return 42, nil }
+		v, err := backoff.Retry(failF, attempts, defaultBackoff)
+
+		Expect(err).ShouldNot(HaveOccurred())
+		Expect(v).To(Equal(42))
+		Expect(*counter).To(Equal(0))
+	})
+
+	It("should retry on error until first success", func() {
+		failF := func() func() (int, error) {
+			i := attempts
+			return func() (int, error) {
+				if i--; i == 0 {
+					return 42, nil
+				}
+
+				return 0, fmt.Errorf("failed")
+			}
+		}
+		v, err := backoff.Retry(failF(), attempts, defaultBackoff)
+
+		Expect(err).ShouldNot(HaveOccurred())
+		Expect(v).To(Equal(42))
+		Expect(*counter).To(Equal(attempts - 1))
+	})
+
+	It("should accept several backoffs", func() {
+		failF := func() func() (int, error) {
+			i := 1 + 3 + attempts + 2 + 2
+			return func() (int, error) {
+				if i--; i == 0 {
+					return 42, nil
+				}
+
+				return 0, fmt.Errorf("failed")
+			}
+		}
+		counter0 := func() *int { i := 0; return &i }()
+		counter1 := func() *int { i := 0; return &i }()
+		counter2 := func() *int { i := 0; return &i }()
+		counter3 := func() *int { i := 0; return &i }()
+		counter4 := func() *int { i := 0; return &i }()
+		v, err := backoff.Retry(
+			failF(),
+			[]int{1, 3, attempts, 2},
+			attemptsCounter(counter0, backoff.Constant(delay).Randomize(time.Millisecond*100)),
+			attemptsCounter(counter1, backoff.Linear(time.Millisecond*100, time.Millisecond*10)),
+			attemptsCounter(counter2, backoff.Exponential(time.Millisecond*300)),
+			attemptsCounter(counter3, backoff.Power(time.Millisecond*100, 2)),
+			attemptsCounter(counter4, backoff.Constant(delay)),
+		)
+
+		Expect(err).ShouldNot(HaveOccurred())
+		Expect(v).To(Equal(42))
+		Expect(*counter0).To(Equal(1))
+		Expect(*counter1).To(Equal(3))
+		Expect(*counter2).To(Equal(attempts))
+		Expect(*counter3).To(Equal(2))
+		Expect(*counter4).To(Equal(1))
+	})
+})

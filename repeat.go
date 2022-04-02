@@ -8,10 +8,10 @@ import (
 func Repeat[A int | []int](
 	fn func() error,
 	attempts A,
-	backOff BackOff,
-	backOffs ...BackOff,
+	backOff Backoff,
+	backOffs ...Backoff,
 ) (err error) {
-	backOffs = append([]BackOff{backOff}, backOffs...)
+	backOffs = append([]Backoff{backOff}, backOffs...)
 	attemptsSlice := func(v any) []int {
 		attemptsSlice, ok := v.([]int)
 		if ok {

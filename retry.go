@@ -8,10 +8,10 @@ import (
 func Retry[T any, A int | []int](
 	fn func() (T, error),
 	attempts A,
-	backOff BackOff,
-	backOffs ...BackOff,
+	backOff Backoff,
+	backOffs ...Backoff,
 ) (v T, err error) {
-	backOffs = append([]BackOff{backOff}, backOffs...)
+	backOffs = append([]Backoff{backOff}, backOffs...)
 	attemptsSlice := func(v any) []int {
 		attemptsSlice, ok := v.([]int)
 		if ok {
@@ -39,4 +39,9 @@ func Retry[T any, A int | []int](
 	}
 
 	return
+}
+
+// Lifts function with single error return to one acceptable by Retry
+func Lift(fn func() error) func() (any, error) {
+	return func() (any, error) { return nil, fn() }
 }

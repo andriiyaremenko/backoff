@@ -2,68 +2,87 @@ package backoff_test
 
 import (
 	"fmt"
-	"testing"
 	"time"
 
 	"github.com/andriiyaremenko/backoff"
-	"github.com/stretchr/testify/assert"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 )
 
-func TestRepeat(t *testing.T) {
-	t.Run("ShouldReturnFirstEncounteredError", testRepeatFail)
-	t.Run("ShouldRunUntilAllAttemptsWhereTaken", testRepeatSuccess)
-	t.Run("ShouldReturnFirstEncounteredErrorEventIfSucceededAtFirst", testRepeatSuccessThenFail)
-	t.Run("ShouldAcceptSeveralBackOffs", testRepeatSeveralBackOffs)
-}
-
-func testRepeatFail(t *testing.T) {
-	t.Parallel()
-	assert := assert.New(t)
-	failF := func() error { return fmt.Errorf("failed") }
-	err := backoff.Repeat(failF, attempts, backoff.Constant(delay).Randomize(time.Millisecond*100))
-
-	assert.Error(err)
-}
-
-func testRepeatSuccess(t *testing.T) {
-	t.Parallel()
-	assert := assert.New(t)
-	failF := func() error { return nil }
-	err := backoff.Repeat(failF, attempts, backoff.Constant(delay).Randomize(time.Millisecond*100))
-
-	assert.NoError(err)
-}
-
-func testRepeatSuccessThenFail(t *testing.T) {
-	t.Parallel()
-	assert := assert.New(t)
-	failF := func() func() error {
-		i := attempts
-		return func() error {
-			if i--; i == 0 {
-				return fmt.Errorf("failed")
-			}
-
-			return nil
-		}
-	}
-	err := backoff.Repeat(failF(), attempts, backoff.Constant(delay).Randomize(time.Millisecond*100))
-
-	assert.Error(err)
-}
-
-func testRepeatSeveralBackOffs(t *testing.T) {
-	t.Parallel()
-	assert := assert.New(t)
-	err := backoff.Repeat(
-		func() error { return nil },
-		[]int{1, 3, attempts, 2},
-		backoff.Constant(delay).Randomize(time.Millisecond*100),
-		backoff.Linear(time.Millisecond*100, time.Millisecond*10),
-		backoff.Exponential(time.Millisecond*300),
-		backoff.Power(time.Millisecond*100, 2),
-		backoff.Constant(delay),
+var _ = Describe("Repeat", func() {
+	const (
+		attempts = 4
+		delay    = time.Millisecond * 100
 	)
 
-	assert.Nil(err)
-}
+	var counter *int
+	var defaultBackoff backoff.Backoff
+	attemptsCounter := func(counter *int, backOff backoff.Backoff) backoff.Backoff {
+		return func(attempt, attempts int) time.Duration {
+			*counter += 1
+			return backOff(attempt, attempts)
+		}
+	}
+
+	BeforeEach(func() {
+		counter = func() *int { i := 0; return &i }()
+		defaultBackoff = attemptsCounter(counter, backoff.Constant(delay).Randomize(time.Millisecond*100))
+	})
+
+	It("should return first encountered error", func() {
+		failF := func() error { return fmt.Errorf("failed") }
+		err := backoff.Repeat(failF, attempts, defaultBackoff)
+
+		Expect(err).Should(HaveOccurred())
+		Expect(*counter).To(Equal(0))
+	})
+
+	It("should not return until all attempts were taken", func() {
+		failF := func() error { return nil }
+		err := backoff.Repeat(failF, attempts, defaultBackoff)
+
+		Expect(err).ShouldNot(HaveOccurred())
+		Expect(*counter).To(Equal(attempts))
+	})
+
+	It("should return first error after successfull attempts", func() {
+		failF := func() func() error {
+			i := attempts
+			return func() error {
+				if i--; i == 0 {
+					return fmt.Errorf("failed")
+				}
+
+				return nil
+			}
+		}
+		err := backoff.Repeat(failF(), attempts, defaultBackoff)
+
+		Expect(err).Should(HaveOccurred())
+		Expect(*counter).To(Equal(attempts - 1))
+	})
+
+	It("should accept several backoffs", func() {
+		counter0 := func() *int { i := 0; return &i }()
+		counter1 := func() *int { i := 0; return &i }()
+		counter2 := func() *int { i := 0; return &i }()
+		counter3 := func() *int { i := 0; return &i }()
+		counter4 := func() *int { i := 0; return &i }()
+		err := backoff.Repeat(
+			func() error { return nil },
+			[]int{1, 3, attempts, 2},
+			attemptsCounter(counter0, backoff.Constant(delay).Randomize(time.Millisecond*100)),
+			attemptsCounter(counter1, backoff.Linear(time.Millisecond*100, time.Millisecond*10)),
+			attemptsCounter(counter2, backoff.Exponential(time.Millisecond*300)),
+			attemptsCounter(counter3, backoff.Power(time.Millisecond*100, 2)),
+			attemptsCounter(counter4, backoff.Constant(delay)),
+		)
+
+		Expect(err).ShouldNot(HaveOccurred())
+		Expect(*counter0).To(Equal(1))
+		Expect(*counter1).To(Equal(3))
+		Expect(*counter2).To(Equal(attempts))
+		Expect(*counter3).To(Equal(2))
+		Expect(*counter4).To(Equal(2))
+	})
+})
