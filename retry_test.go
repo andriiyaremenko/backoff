@@ -11,8 +11,7 @@ import (
 
 var _ = Describe("Repeat", func() {
 	const (
-		attempts = 4
-		delay    = time.Millisecond * 100
+		delay = time.Millisecond * 100
 	)
 
 	var counter *int
@@ -31,15 +30,15 @@ var _ = Describe("Repeat", func() {
 
 	It("should not return until all attempts were taken", func() {
 		failF := func() error { return fmt.Errorf("failed") }
-		_, err := backoff.Retry(backoff.Lift(failF), attempts, defaultBackoff)
+		_, err := backoff.Retry[backoff.SameAttempts](backoff.Lift(failF), 4, defaultBackoff)
 
 		Expect(err).Should(HaveOccurred())
-		Expect(*counter).To(Equal(attempts))
+		Expect(*counter).To(Equal(4))
 	})
 
 	It("should return first successful result", func() {
 		failF := func() (int, error) { return 42, nil }
-		v, err := backoff.Retry(failF, attempts, defaultBackoff)
+		v, err := backoff.Retry[backoff.SameAttempts](failF, 4, defaultBackoff)
 
 		Expect(err).ShouldNot(HaveOccurred())
 		Expect(v).To(Equal(42))
@@ -48,7 +47,7 @@ var _ = Describe("Repeat", func() {
 
 	It("should retry on error until first success", func() {
 		failF := func() func() (int, error) {
-			i := attempts
+			i := 4
 			return func() (int, error) {
 				if i--; i == 0 {
 					return 42, nil
@@ -57,16 +56,16 @@ var _ = Describe("Repeat", func() {
 				return 0, fmt.Errorf("failed")
 			}
 		}
-		v, err := backoff.Retry(failF(), attempts, defaultBackoff)
+		v, err := backoff.Retry[backoff.SameAttempts](failF(), 4, defaultBackoff)
 
 		Expect(err).ShouldNot(HaveOccurred())
 		Expect(v).To(Equal(42))
-		Expect(*counter).To(Equal(attempts - 1))
+		Expect(*counter).To(Equal(4 - 1))
 	})
 
 	It("should accept several backoffs", func() {
 		failF := func() func() (int, error) {
-			i := 1 + 3 + attempts + 2 + 2
+			i := 1 + 3 + 4 + 2 + 2
 			return func() (int, error) {
 				if i--; i == 0 {
 					return 42, nil
@@ -80,9 +79,9 @@ var _ = Describe("Repeat", func() {
 		counter2 := func() *int { i := 0; return &i }()
 		counter3 := func() *int { i := 0; return &i }()
 		counter4 := func() *int { i := 0; return &i }()
-		v, err := backoff.Retry(
+		v, err := backoff.Retry[backoff.DifferentAttempts](
 			failF(),
-			[]int{1, 3, attempts, 2},
+			[]int{1, 3, 4, 2},
 			attemptsCounter(counter0, backoff.Constant(delay).Randomize(time.Millisecond*100)),
 			attemptsCounter(counter1, backoff.Linear(time.Millisecond*100, time.Millisecond*10)),
 			attemptsCounter(counter2, backoff.Exponential(time.Millisecond*300)),
@@ -90,12 +89,12 @@ var _ = Describe("Repeat", func() {
 			attemptsCounter(counter4, backoff.Constant(delay)),
 		)
 
-		Expect(err).ShouldNot(HaveOccurred())
-		Expect(v).To(Equal(42))
 		Expect(*counter0).To(Equal(1))
 		Expect(*counter1).To(Equal(3))
-		Expect(*counter2).To(Equal(attempts))
+		Expect(*counter2).To(Equal(4))
 		Expect(*counter3).To(Equal(2))
 		Expect(*counter4).To(Equal(1))
+		Expect(v).To(Equal(42))
+		Expect(err).ShouldNot(HaveOccurred())
 	})
 })

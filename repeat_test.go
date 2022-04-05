@@ -11,8 +11,7 @@ import (
 
 var _ = Describe("Repeat", func() {
 	const (
-		attempts = 4
-		delay    = time.Millisecond * 100
+		delay = time.Millisecond * 100
 	)
 
 	var counter *int
@@ -31,7 +30,7 @@ var _ = Describe("Repeat", func() {
 
 	It("should return first encountered error", func() {
 		failF := func() error { return fmt.Errorf("failed") }
-		err := backoff.Repeat(failF, attempts, defaultBackoff)
+		err := backoff.Repeat[backoff.SameAttempts](failF, 4, defaultBackoff)
 
 		Expect(err).Should(HaveOccurred())
 		Expect(*counter).To(Equal(0))
@@ -39,15 +38,15 @@ var _ = Describe("Repeat", func() {
 
 	It("should not return until all attempts were taken", func() {
 		failF := func() error { return nil }
-		err := backoff.Repeat(failF, attempts, defaultBackoff)
+		err := backoff.Repeat[backoff.SameAttempts](failF, 4, defaultBackoff)
 
 		Expect(err).ShouldNot(HaveOccurred())
-		Expect(*counter).To(Equal(attempts))
+		Expect(*counter).To(Equal(4))
 	})
 
 	It("should return first error after successfull attempts", func() {
 		failF := func() func() error {
-			i := attempts
+			i := 4
 			return func() error {
 				if i--; i == 0 {
 					return fmt.Errorf("failed")
@@ -56,10 +55,10 @@ var _ = Describe("Repeat", func() {
 				return nil
 			}
 		}
-		err := backoff.Repeat(failF(), attempts, defaultBackoff)
+		err := backoff.Repeat[backoff.SameAttempts](failF(), 4, defaultBackoff)
 
 		Expect(err).Should(HaveOccurred())
-		Expect(*counter).To(Equal(attempts - 1))
+		Expect(*counter).To(Equal(4 - 1))
 	})
 
 	It("should accept several backoffs", func() {
@@ -68,9 +67,9 @@ var _ = Describe("Repeat", func() {
 		counter2 := func() *int { i := 0; return &i }()
 		counter3 := func() *int { i := 0; return &i }()
 		counter4 := func() *int { i := 0; return &i }()
-		err := backoff.Repeat(
+		err := backoff.Repeat[backoff.DifferentAttempts](
 			func() error { return nil },
-			[]int{1, 3, attempts, 2},
+			[]int{1, 3, 4, 2},
 			attemptsCounter(counter0, backoff.Constant(delay).Randomize(time.Millisecond*100)),
 			attemptsCounter(counter1, backoff.Linear(time.Millisecond*100, time.Millisecond*10)),
 			attemptsCounter(counter2, backoff.Exponential(time.Millisecond*300)),
@@ -81,7 +80,7 @@ var _ = Describe("Repeat", func() {
 		Expect(err).ShouldNot(HaveOccurred())
 		Expect(*counter0).To(Equal(1))
 		Expect(*counter1).To(Equal(3))
-		Expect(*counter2).To(Equal(attempts))
+		Expect(*counter2).To(Equal(4))
 		Expect(*counter3).To(Equal(2))
 		Expect(*counter4).To(Equal(2))
 	})

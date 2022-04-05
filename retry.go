@@ -5,40 +5,33 @@ import (
 )
 
 // Retries fn until it is successful.
-func Retry[T any, A int | []int](
-	fn func() (T, error),
+func Retry[A Attempts, T any, Fn func() (T, error)](
+	fn Fn,
 	attempts A,
 	backOff Backoff,
 	backOffs ...Backoff,
-) (v T, err error) {
+) (T, error) {
 	backOffs = append([]Backoff{backOff}, backOffs...)
-	attemptsSlice := func(v any) []int {
-		attemptsSlice, ok := v.([]int)
-		if ok {
-			return attemptsSlice
-		}
+	var (
+		v   T
+		err error
+	)
 
-		return []int{v.(int)}
-	}(attempts)
+	for n, backOff := range backOffs {
+		backOffAttempts := attempts.Next(n)
 
-	for i, backOff := range backOffs {
-		next := i
-		if next >= len(attemptsSlice) {
-			next = len(attemptsSlice) - 1
-		}
-
-		for j := 1; j <= attemptsSlice[next]; j++ {
+		for i := 1; i <= backOffAttempts; i++ {
 			v, err = fn()
 
 			if err == nil {
-				return
+				return v, nil
 			}
 
-			time.Sleep(backOff(j, attemptsSlice[next]))
+			time.Sleep(backOff(i, backOffAttempts))
 		}
 	}
 
-	return
+	return v, err
 }
 
 // Lifts function with single error return to one acceptable by Retry
