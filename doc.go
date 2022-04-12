@@ -22,7 +22,7 @@
 // 		},
 // 		1,
 // 		backoff.Constant(delay).Randomize(time.Millisecond*100),
-// 		backoff.Linear(time.Millisecond*100, time.Millisecond*10).WithAttempts(2),
+// 		backoff.Linear(time.Millisecond*100, time.Millisecond*10).With(2),
 // 	)
 // 	// check if err is nil and process response v
 //
@@ -32,7 +32,7 @@
 // 		},
 // 		2,
 // 		backoff.Constant(time.Second).Randomize(time.Millisecond*100),
-// 		backoff.Linear(time.Millisecond*100, time.Millisecond*10).WithAttempts(4),
+// 		backoff.Linear(time.Millisecond*100, time.Millisecond*10).With(4),
 // 	)
 // 	// check if err is nil
 // }
