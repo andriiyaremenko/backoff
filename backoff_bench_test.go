@@ -21,15 +21,15 @@ func BenchmarkLinear(b *testing.B) {
 	}
 }
 
-func BenchmarkPower(b *testing.B) {
-	backOff := backoff.Power(time.Millisecond*10, 2)
+func BenchmarkExponential(b *testing.B) {
+	backOff := backoff.Exponential(time.Millisecond*10, 2)
 	for i := 0; i < b.N; i++ {
 		_ = backOff(i, b.N)
 	}
 }
 
-func BenchmarkExpotential(b *testing.B) {
-	backOff := backoff.Exponential(time.Millisecond * 10)
+func BenchmarkNaturalExp(b *testing.B) {
+	backOff := backoff.NaturalExp(time.Millisecond * 10)
 	for i := 0; i < b.N; i++ {
 		_ = backOff(i, b.N)
 	}

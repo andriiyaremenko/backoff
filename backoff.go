@@ -25,7 +25,8 @@ func Constant(delay time.Duration) Backoff {
 }
 
 // Back-off with delay exponentially growing from the smallest till specified maximum.
-func Exponential(delay time.Duration) Backoff {
+// Uses natural exponent.
+func NaturalExp(delay time.Duration) Backoff {
 	return func(attempt, attempts int) time.Duration {
 		return time.Duration(float64(delay) / math.Exp(float64(attempts-attempt)))
 	}
@@ -39,7 +40,7 @@ func Linear(delay, delta time.Duration) Backoff {
 }
 
 // Back-off with delay growing by power if base.
-func Power(delay time.Duration, base float64) Backoff {
+func Exponential(delay time.Duration, base float64) Backoff {
 	return func(attempt, _ int) time.Duration {
 		return delay * time.Duration(math.Pow(base, float64(attempt)))
 	}

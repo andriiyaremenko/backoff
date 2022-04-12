@@ -44,7 +44,7 @@ var _ = Describe("Repeat", func() {
 		Expect(*counter).To(Equal(4))
 	})
 
-	It("should return first error after successfull attempts", func() {
+	It("should return first error after successful attempts", func() {
 		failF := func() func() error {
 			i := 4
 			return func() error {
@@ -72,8 +72,8 @@ var _ = Describe("Repeat", func() {
 			[]int{1, 3, 4, 2},
 			attemptsCounter(counter0, backoff.Constant(delay).Randomize(time.Millisecond*100)),
 			attemptsCounter(counter1, backoff.Linear(time.Millisecond*100, time.Millisecond*10)),
-			attemptsCounter(counter2, backoff.Exponential(time.Millisecond*300)),
-			attemptsCounter(counter3, backoff.Power(time.Millisecond*100, 2)),
+			attemptsCounter(counter2, backoff.NaturalExp(time.Millisecond*300)),
+			attemptsCounter(counter3, backoff.Exponential(time.Millisecond*100, 2)),
 			attemptsCounter(counter4, backoff.Constant(delay)),
 		)
 

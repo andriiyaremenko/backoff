@@ -31,19 +31,19 @@ var _ = Describe("Backoff", func() {
 		}
 	})
 
-	It("power should return delay multiplied by base pover of attempt number", func() {
+	It("exponential should return delay multiplied by base power of attempt number", func() {
 		var base float64 = 2
-		backOff := backoff.Power(delay, base)
+		backOff := backoff.Exponential(delay, base)
 		for i := 1; i <= attempts; i++ {
 			expected := delay * time.Duration(math.Pow(base, float64(i)))
 			Expect(backOff(i, attempts)).To(Equal(expected))
 		}
 	})
 
-	It("expotential should return delay with expotential growth", func() {
+	It("natural exponent should return delay with exponential growth", func() {
 		maxDelay := time.Hour * 24
 		attempts := 7
-		backOff := backoff.Exponential(maxDelay)
+		backOff := backoff.NaturalExp(maxDelay)
 		for i := 1; i <= attempts; i++ {
 			expected := time.Duration(float64(maxDelay) / math.Exp(float64(attempts-i)))
 			Expect(backOff(i, attempts)).To(Equal(expected))
