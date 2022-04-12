@@ -20,12 +20,9 @@
 // 		func() (any, error) {
 // 			// your function to process and get the result
 // 		},
-// 		[]int{1, 3, attempts, 2}, // also possible to use just any single int value
+// 		1,
 // 		backoff.Constant(delay).Randomize(time.Millisecond*100),
-// 		backoff.Linear(time.Millisecond*100, time.Millisecond*10),
-// 		backoff.NaturalExp(time.Millisecond*300),
-// 		backoff.Exponential(time.Millisecond*100, 2),
-// 		backoff.Constant(delay),
+// 		backoff.Linear(time.Millisecond*100, time.Millisecond*10).WithAttempts(2),
 // 	)
 // 	// check if err is nil and process response v
 //
@@ -33,12 +30,9 @@
 // 		func() error {
 // 			// your function to process
 // 		},
-// 		[]int{1, 3, attempts, 2}, // also possible to use just any single int value
-// 		backoff.Constant(delay).Randomize(time.Millisecond*100),
-// 		backoff.Linear(time.Millisecond*100, time.Millisecond*10),
-// 		backoff.NaturalExp(time.Millisecond*300),
-// 		backoff.Exponential(time.Millisecond*100, 2),
-// 		backoff.Constant(delay),
+// 		2,
+// 		backoff.Constant(time.Second).Randomize(time.Millisecond*100),
+// 		backoff.Linear(time.Millisecond*100, time.Millisecond*10).WithAttempts(4),
 // 	)
 // 	// check if err is nil
 // }

@@ -7,6 +7,7 @@ import (
 )
 
 type Backoff func(attempt, attempts int) time.Duration
+type BackoffOption func() (Backoff, int)
 
 // Adds random delay within deviation limit to the base delay.
 func (backOff Backoff) Randomize(deviation time.Duration) Backoff {
@@ -14,6 +15,20 @@ func (backOff Backoff) Randomize(deviation time.Duration) Backoff {
 		r := rand.New(rand.NewSource(time.Now().Unix()))
 
 		return backOff(attempt, attempts) + time.Duration(r.Int63n(int64(deviation)))
+	}
+}
+
+// Backoff with number of attempts provided in Repeat/Retry.
+func (backoff Backoff) AsIs() BackoffOption {
+	return func() (Backoff, int) {
+		return backoff, -1
+	}
+}
+
+// Backoff with provided number of attempts.
+func (backoff Backoff) With(attempts int) BackoffOption {
+	return func() (Backoff, int) {
+		return backoff, attempts
 	}
 }
 
